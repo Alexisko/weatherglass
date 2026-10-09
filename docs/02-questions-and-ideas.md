@@ -77,25 +77,25 @@ Almost every question above maps to one of **eight answer types**. Each one is a
 
 ### 3.1 The question box (your "free field" idea)
 
-**Principle: the text field doesn't generate answers. It fills in a query spec, and a deterministic engine computes the answer.** Numbers always come from the data, never from a language model. This keeps answers exact, reproducible and explainable.
+**Principle: the AI doesn't generate answers. It translates the question into a query spec, and a deterministic engine computes the answer.** Numbers always come from the data, never from a language model. This keeps answers exact, reproducible and explainable.
 
 ```
 "is it hotter than usual in Lyon today?"
-        │  parser (rules first; optional LLM later)
+        │  AI parser (Claude, behind a serverless proxy that holds the API key)
         ▼
-{ type: "anomaly", places: ["Lyon, FR"], date: "today", metrics: ["tmax","tmin"] }
-        │  editable chips:  [Anomaly] [Lyon ▾] [today ▾] [temperature ▾]
+{ type: "anomaly", places: ["Lyon"], date: "today", metrics: ["tmax","tmin"] }
+        │  validated against the JSON Schema, place geocoded, shown as editable chips:
+        │  [Anomaly] [Lyon, FR ▾] [today ▾] [temperature ▾]
         ▼
 engine (ERA5 + forecast) ──► answer sentence + dashboard + "how computed"
 ```
 
-The question goes through three levels of understanding, which are shipped in order:
+- **AI parser (primary).** A small serverless proxy (Cloudflare Worker) holds the API key, which can't live on GitHub Pages. Claude returns only a query spec, constrained by structured outputs to the JSON Schema. It handles paraphrases, typos, relative dates ("last winter", "since I was born in 1985"), follow-ups ("and in July?") and questions typed in other languages. Answers are always in English.
+- **Editable chips.** The parse is always shown as chips, so a misunderstanding costs one click to correct, and users can see how their question was understood.
+- **Guided templates (discovery and fallback).** Sentence templates with blanks ("How does *[today]* in *[Paris]* compare to normal?") teach users what they can ask, and they keep the site usable when the proxy is down or rate-limited.
+- **Out-of-scope questions** get an honest "I can't answer that yet" and the closest templates, not a guessed dashboard.
 
-1. **Guided questions, no parsing.** The box offers sentence templates with blanks: "How does *[today]* in *[Paris]* compare to normal?", "Compare *[Paris]* and *[Madrid]* in *[July]*", "How has *[summer]* changed in *[Lyon]* since *[1950]*?". This is fast to build, covers 80 % of the value, and also teaches users what the site can do.
-2. **Rule-based parser (EN + FR), client-side.** Keyword and intent rules, place extraction through the geocoder, date expressions ("today", "last week", "in May", "since 1980") and comparison words ("vs", "compared to", "plus que"). It is free, private and works offline. The result is always shown as **editable chips**, so a wrong parse costs one click to correct.
-3. **Optional LLM parser.** Used only when the rules fail. A small serverless proxy (for example a Cloudflare Worker) holds the API key, which can't live on GitHub Pages. The model's only job is to output a query spec that is validated against a JSON schema. Rate-limited, with the rules as fallback.
-
-The query spec doubles as the **URL** (`?q=anomaly&place=lyon&date=today`). Every answer is shareable, and the back button works.
+The query spec doubles as the **URL** (`?q=anomaly&place=lyon&date=today`). Every answer is shareable, and the back button works. Proxy, cost and evaluation details: `04-roadmap.md`, Phase 3.
 
 ### 3.2 The answer page
 
@@ -120,7 +120,7 @@ Every answer type produces the same layout:
 - **Comfort metrics** people actually feel: apparent temperature, dew point (muggy above ~16 °C, oppressive above ~20 °C), wind chill.
 - **Practical indices**: heating and cooling degree days, growing degree days, last frost date, sunshine and solar radiation.
 - **Köppen–Geiger class** computed from the normals ("Lyon: Cfb, temperate oceanic"), with a short explanation.
-- **Units and language**: °C/°F, mm/in, EN/FR.
+- **Units**: °C/°F, mm/in. English-only interface.
 
 ### 3.4 Out of scope (deliberately)
 

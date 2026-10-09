@@ -33,3 +33,4 @@ GitHub Pages (static site, no server)
 
 ## Planning docs (read first)
 See `docs/`: audit of v1, question catalogue & answer types, methodology (source of truth for every metric), and the phased roadmap. Methodology changes go in `docs/03-methodology.md` before code.
+Decisions: light theme default (dark available, both WCAG AA), English only, AI question parsing via a serverless proxy (the AI outputs only a schema-validated query spec; numbers are always computed).
