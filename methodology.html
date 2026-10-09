@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Methodology · Weatherglass</title>
+  <meta name="description" content="How Weatherglass computes its climate numbers: data sources, reference period, definitions and limits.">
+  <script>
+    try { if (localStorage.getItem('wg-theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="./">
+        <svg class="brand__mark" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+          <polygon points="10,1.5 17.5,5.75 17.5,14.25 10,18.5 2.5,14.25 2.5,5.75" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <polygon points="10,6 13.6,8 13.6,12 10,14 6.4,12 6.4,8" fill="currentColor" opacity="0.35"/>
+        </svg>
+        <span>Weatherglass</span>
+      </a>
+      <span></span>
+      <a href="./">Search a place</a>
+    </div>
+  </header>
+
+  <main id="main" class="page">
+    <article class="prose">
+      <h1>How Weatherglass computes its numbers</h1>
+      <p class="version">Methodology version 0.2 · October 2026</p>
+      <p class="lede">
+        Every number on Weatherglass is computed by the site's own code from published climate data,
+        using definitions from the World Meteorological Organization (WMO) and the international
+        climate-extremes community (ETCCDI). This page explains what the data is, how each figure is
+        defined, and where the numbers can be wrong.
+      </p>
+
+      <h2>The data</h2>
+      <p>
+        Weatherglass uses <strong>ERA5</strong>, the global climate reanalysis produced by the European
+        Centre for Medium-Range Weather Forecasts (ECMWF) for the Copernicus Climate Change Service.
+        A reanalysis is a reconstruction of past weather: a weather model is run over the past and
+        continuously corrected with millions of observations from weather stations, balloons, ships,
+        aircraft and satellites. The result is a complete, consistent record for every place on Earth,
+        hour by hour, since 1940.
+      </p>
+      <p>
+        The data is downloaded from the <a href="https://open-meteo.com/en/docs/historical-weather-api">Open-Meteo Historical Weather API</a>,
+        one request per place, and cached in your browser. Daily values (highest and lowest temperature,
+        precipitation, snowfall, sunshine and daylight) follow the place's local time.
+      </p>
+      <p>
+        Earlier versions of this site used a single climate-model simulation. A climate model's
+        "2013–2022" is a plausible decade, not the weather that actually happened, so it has been
+        replaced by ERA5.
+      </p>
+
+      <h2>The reference period: 1991–2020</h2>
+      <p>
+        A <strong>climate normal</strong> is an average over 30 years, long enough to smooth out
+        year-to-year swings. Weatherglass uses <strong>1991–2020</strong>, the current WMO standard
+        reference period (WMO-No. 1203). A period that crosses the new year, such as December to
+        February, occurs 29 complete times in that window.
+      </p>
+      <p>
+        Data completeness follows WMO practice. A month counts towards an average only if no more than 5
+        days are missing, with no more than 3 in a row. Totals and counts need every day. A normal is
+        published only if at least 80 % of the years (24 of 30) are usable. ERA5 is complete, so these
+        rules rarely apply, but they are built in.
+      </p>
+
+      <h2>Definitions</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Figure</th><th scope="col">Definition</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Daytime high</th><td>Average of the daily maximum air temperature at 2 m. For a month: the average of the 30 monthly means. For a longer period, each month is weighted by its number of days.</td></tr>
+            <tr><th scope="row">Night low</th><td>Average of the daily minimum air temperature at 2 m. The minimum usually happens around sunrise.</td></tr>
+            <tr><th scope="row">Most days / most nights</th><td>The range between the 10th and 90th percentile of all daily values in the period over the 30 years. 8 days in 10 fall inside it. Percentiles use linear interpolation (the method used by spreadsheets, R and NumPy).</td></tr>
+            <tr><th scope="row">Day with rain</th><td>A day with at least <strong>1.0 mm</strong> of precipitation (WMO / ETCCDI "R1mm"). Smaller amounts are mostly drizzle that models produce too often. Where snow is common, the site says "rain or snow", because precipitation includes melted snow.</td></tr>
+            <tr><th scope="row">Share of days</th><td>Days with rain divided by all days in the period, over the 30 years.</td></tr>
+            <tr><th scope="row">Precipitation</th><td>Total rain and melted snow (water equivalent), averaged over the 30 years: per month, or for the whole selected period.</td></tr>
+            <tr><th scope="row">Day with snow</th><td>A day with at least 1 cm of fresh snowfall.</td></tr>
+            <tr><th scope="row">Sunshine</th><td>Hours a day with strong direct sunlight (direct irradiance above 120 W/m², the WMO definition), as modelled. Shown with the share of daylight it represents.</td></tr>
+            <tr><th scope="row">Daylight</th><td>Hours between sunrise and sunset.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Known limits</h2>
+      <ul>
+        <li><strong>A grid cell, not a weather station.</strong> ERA5 cells are about 25–30 km wide. Coasts, valleys, mountains and city heat islands are smoothed, so local extremes are muted. Open-Meteo adjusts temperature to the elevation of the exact point; other variables are not adjusted.</li>
+        <li><strong>Precipitation is less certain than temperature,</strong> especially for thunderstorms, mountains and the tropics.</li>
+        <li><strong>Sunshine is modelled</strong> from cloud and radiation fields. It is not measured by a sunshine recorder.</li>
+        <li><strong>Differences from official normals are expected.</strong> National weather services use station data and sometimes other day boundaries (for example 09:00 to 09:00).</li>
+        <li><strong>The climate is changing.</strong> 1991–2020 normals describe the recent past. Recent years in many places are warmer than these normals.</li>
+      </ul>
+
+      <h2>How the numbers are checked</h2>
+      <ul>
+        <li>Every statistic is computed by small, unit-tested functions. The tests run on every change.</li>
+        <li>Planned: a published comparison against official normals for about ten reference stations in different climates.</li>
+        <li>Changes to definitions are versioned. This page shows the version in use.</li>
+      </ul>
+
+      <h2>References</h2>
+      <ul>
+        <li>WMO (2017). <em>WMO Guidelines on the Calculation of Climate Normals</em>, WMO-No. 1203.</li>
+        <li>ETCCDI. Climate extremes indices, <a href="https://etccdi.pacificclimate.org/list_27_indices.shtml">definitions of the 27 core indices</a>.</li>
+        <li>Hersbach, H. et al. (2020). The ERA5 global reanalysis. <em>Quarterly Journal of the Royal Meteorological Society</em> 146, 1999–2049.</li>
+        <li>Open-Meteo. <a href="https://open-meteo.com/en/docs/historical-weather-api">Historical Weather API documentation</a>.</li>
+      </ul>
+      <p>
+        The full working methodology, including definitions for features still to come, is in the
+        <a href="https://github.com/Alexisko/weatherglass/blob/main/docs/03-methodology.md">project documentation</a>.
+      </p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Data: <a href="https://open-meteo.com/">Open-Meteo</a> (CC BY 4.0), using ERA5 from the
+      Copernicus Climate Change Service / ECMWF.
+      · <a href="https://github.com/Alexisko/weatherglass">Source on GitHub</a>
+    </p>
+  </footer>
+</body>
+</html>

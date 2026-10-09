@@ -1,0 +1,12 @@
+{
+  "name": "weatherglass",
+  "private": true,
+  "description": "Static climate explorer. No build step; package.json only configures ES modules and test scripts.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check:contrast": "node scripts/check-contrast.js",
+    "check": "npm test && npm run check:contrast"
+  },
+  "engines": { "node": ">=20" }
+}
