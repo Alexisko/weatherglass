@@ -1,36 +1,42 @@
-# Weather Climate App
+# Weatherglass
 
-## Project goal
-A single-page weather app to explore the climate of any place over a chosen time window (1 month to 1 year). No backend. Pure HTML/CSS/JS.
+Static climate explorer on GitHub Pages: plain HTML, CSS and ES modules. **No build step, no framework, no runtime dependency** (Google Fonts only). Served from the repo root.
 
-## Features
-- Location search (city or region name)
-- Time range selector (1 month → 1 year)
-- Display: sunshine hours, rain day probability, precipitation quantity, daily temperature range (min/max), nighttime temperature
+## Read first
+- `docs/04-roadmap.md`: decisions, phases, sprint log. `docs/03-methodology.md` is the **source of truth for every metric**: change it *before* changing statistics code, and bump `METHODOLOGY_VERSION` in `js/config.js` and `methodology.html`.
+- `docs/01-audit.md` (why v1 was rebuilt) and `docs/02-questions-and-ideas.md` (answer types, question box).
 
-## Architecture
-weather-app/
-├── index.html
-├── style.css
-├── app.js
-└── components/
+## Decisions
+- Light theme by default, dark available. **Both must pass WCAG AA** (`npm run check:contrast`).
+- English only.
+- Questions in plain English (Phase 3) go through an AI parser behind a serverless proxy. The AI outputs **only** a query spec validated against `schema/query-spec.schema.json`. Numbers are always computed by `js/stats/`, never by a model.
+- Data: ERA5 via the Open-Meteo Historical Weather API, normals 1991–2020, local days (`timezone=auto`). Climate-model data is only for future projections (Phase 7).
 
-## Data source
-Open-Meteo Climate API — free, no API key needed.
-Docs: https://open-meteo.com/en/docs/climate-api
-Open-Meteo Geocoding API for converting user input in coordinates.
+## Layout
+```
+index.html, methodology.html
+css/tokens.css     colours/type tokens for both themes (checked by scripts/check-contrast.js)
+css/main.css       layout and components
+js/config.js       methodology constants (reference period, thresholds, percentiles)
+js/api/            geocode.js, archive.js (fetch + normalise), cache.js (IndexedDB, best-effort)
+js/stats/          pure, unit-tested statistics (no DOM): basic, months, completeness, profile
+js/query/spec.js   query spec: validate, normalise, URL <-> spec
+js/views/          DOM/SVG rendering: charts (inline SVG), table + CSV, figures, sentence, method notes
+js/ui/             search combobox, period control, theme/units prefs
+js/main.js         routing (URL is the state) and orchestration
+schema/            query-spec JSON Schema (contract for the Phase 3 AI parser)
+tests/             node --test; synthetic series in tests/helpers.js
+```
 
-## Tech stack
-- Vanilla HTML5 / CSS3 / ES6 JS
-- Chart.js via CDN for visualizations
-- No build tools, no frameworks
+## Conventions
+- Statistics are pure functions in `js/stats/` with tests. Views never compute statistics.
+- Insert API or user strings with `textContent`, never `innerHTML`.
+- Charts follow the dataviz rules: one y-axis, thin marks, legend for ≥ 2 series, selective direct labels, and a tooltip that is never the only way to read a value (the table is the accessible twin).
+- Every new answer type extends the schema enum, `ANSWER_TYPES` in `js/query/spec.js`, and the tests.
 
-## Design direction
-Use the frontend-design skill. Go for a clean, data-forward aesthetic — think weather station meets editorial magazine. Prioritize legibility of the climate data over decorative elements.
-
-## Deployment
-GitHub Pages (static site, no server)
-
-## Planning docs (read first)
-See `docs/`: audit of v1, question catalogue & answer types, methodology (source of truth for every metric), and the phased roadmap. Methodology changes go in `docs/03-methodology.md` before code.
-Decisions: light theme default (dark available, both WCAG AA), English only, AI question parsing via a serverless proxy (the AI outputs only a schema-validated query spec; numbers are always computed).
+## Commands
+```sh
+python3 -m http.server 8000   # run locally
+npm test                      # unit tests (Node 20+, no install needed)
+npm run check                 # tests + contrast check (what CI runs)
+```

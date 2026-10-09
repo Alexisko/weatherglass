@@ -1,0 +1,98 @@
+/* Weatherglass design tokens.
+   Light is the default theme; dark is opt-in via <html data-theme="dark">.
+   Every pair used for text or data marks is checked by scripts/check-contrast.js
+   (WCAG AA: text ≥ 4.5:1, data marks and control borders ≥ 3:1). */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --page:        #f5f4ef;
+  --surface:     #ffffff;
+  --surface-2:   #f8f7f3;
+
+  /* Text */
+  --text:        #1a1a17;
+  --text-2:      #45443f;
+  --text-3:      #5f5e58;
+  --danger-text: #a3301b;
+
+  /* Lines */
+  --border:          #dddbd3;
+  --control-border:  #8a8880;
+  --grid:            #ebe9e2;
+  --axis:            #b6b4ab;
+
+  /* Interaction */
+  --accent:          #1c5cab;
+  --accent-contrast: #ffffff;
+  --accent-soft:     #e7eef9;
+  --highlight:       #eef2f8;   /* selected months in charts and table */
+
+  /* Brand mark (decorative only, never text) */
+  --brand: #b08a2a;
+
+  /* Data — validated with the dataviz palette validator (light surface #ffffff) */
+  --c-high:      #d4582a;
+  --c-high-wash: rgba(212, 88, 42, 0.13);
+  --c-low:       #2a78d6;
+  --c-low-wash:  rgba(42, 120, 214, 0.13);
+  --c-rain:      #2a78d6;
+  --c-sun:       #b07600;
+  --c-daylight:  #f1e2b8;   /* track behind sunshine; values also in tooltip and table */
+
+  /* Type */
+  --font-sans:  'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+
+  --fs-xs: 0.8125rem;  /* 13px: smallest label */
+  --fs-s:  0.875rem;   /* 14px */
+  --fs-m:  1rem;       /* 16px: body */
+  --fs-l:  1.25rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: clamp(2rem, 5vw, 2.75rem);
+
+  /* Space */
+  --sp-1: 0.25rem; --sp-2: 0.5rem; --sp-3: 0.75rem; --sp-4: 1rem;
+  --sp-5: 1.5rem;  --sp-6: 2rem;   --sp-7: 3rem;
+
+  --radius: 10px;
+  --radius-s: 6px;
+  --shadow: 0 1px 2px rgba(20, 20, 15, 0.05);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page:        #111214;
+  --surface:     #1a1b1f;
+  --surface-2:   #202226;
+
+  --text:        #f1f0ea;
+  --text-2:      #cbc9c0;
+  --text-3:      #a8a69d;
+  --danger-text: #ff9a85;
+
+  --border:          #33353a;
+  --control-border:  #6f7178;
+  --grid:            #2a2c31;
+  --axis:            #4b4d53;
+
+  --accent:          #86b6f2;
+  --accent-contrast: #0d1726;
+  --accent-soft:     #1f2c40;
+  --highlight:       #232a35;
+
+  --brand: #c9a84c;
+
+  /* validated against dark surface #1a1b1e */
+  --c-high:      #e0703f;
+  --c-high-wash: rgba(224, 112, 63, 0.16);
+  --c-low:       #3f8ae6;
+  --c-low-wash:  rgba(63, 138, 230, 0.16);
+  --c-rain:      #3f8ae6;
+  --c-sun:       #d19a24;
+  --c-daylight:  #463a1c;
+
+  --shadow: none;
+}

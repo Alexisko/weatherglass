@@ -24,37 +24,43 @@ Sizes are relative effort: S ≈ a few days, M ≈ 1–2 weeks, L ≈ 3+ weeks f
 | 1 | **Light theme by default**, dark theme available, and both must be readable | Phase 1: two token sets, with AA contrast checked in CI for both |
 | 2 | **English only** | No translation layer. The AI parser still understands questions typed in other languages, but answers are in English. |
 | 3 | **Serverless proxy accepted. AI is the primary way to understand questions.** | Phase 3 is built around the AI parser. Rule-based parsing shrinks to a minimal fallback. |
-| 4 | City table coverage: **open** (recommendation: global, about 500 cities) | Only affects Phase 6. See that phase. |
+| 4 | City table coverage: **global, starting with about 500 cities** | Only affects Phase 6. Check the API quota cost first (see Phase 6). |
 
 ---
 
-## Phase 0: Foundations and correct data (M)
+## Phase 0: Foundations and correct data (M), sprint 1 done
 
 **Goal:** the numbers are right and testable before anything is redesigned.
 
+Still open from Phase 0:
+- **Golden fixtures** recorded from the real API (the sprint ran without network access to Open-Meteo, so tests use synthetic series).
+- The **benchmark against official normals** (`03` §5), which is also the "done when" check below.
+- Confirm the live API returns every requested variable for `models=era5` (`03` §2 *verify*).
+
 Methodology
-- [ ] Switch the data source from the Climate API (`EC_Earth3P_HR`, 2013–2022) to the **Historical Weather API (ERA5 / ERA5-Land), 1991–2020** (`03` §2).
-- [ ] `timezone=auto` (local days).
-- [ ] Wet day ≥ 1.0 mm. Count the years actually present instead of `/ 10`.
-- [ ] Replace cloud cover with `sunshine_duration` and `daylight_duration`.
-- [ ] **Delete** the synthetic "Average Day Profile" chart.
-- [ ] Add P10–P90 to every monthly statistic.
+- [x] Switch the data source from the Climate API (`EC_Earth3P_HR`, 2013–2022) to the **Historical Weather API (ERA5), 1991–2020** (`03` §2).
+- [x] `timezone=auto` (local days).
+- [x] Wet day ≥ 1.0 mm. Count the years actually present instead of `/ 10`.
+- [x] Replace cloud cover with `sunshine_duration` and `daylight_duration`.
+- [x] **Delete** the synthetic "Average Day Profile" chart.
+- [x] Add P10–P90 to every monthly statistic.
 
 Engineering
-- [ ] Split `app.js` into ES modules (no build step, `<script type="module">`):
+- [x] Split `app.js` into ES modules (no build step, `<script type="module">`):
   `api/` (geocode, archive, forecast, climate + IndexedDB cache) · `stats/` (pure functions) · `query/` (**query spec** schema, URL ⇄ spec) · `views/` (cards, charts) · `ui/` (search, controls).
-- [ ] Define the **query spec** as a JSON Schema now (`query/spec.schema.json`). The URL, the guided templates and the AI parser in Phase 3 all produce it.
-- [ ] `stats/` unit tests with `node --test` + golden fixtures (`03` §5).
-- [ ] URL state (`?place=…&months=5-6`), so results are shareable and the back button works.
-- [ ] Error handling around every render. Destroy and update Chart.js instances.
-- [ ] GitHub Actions: tests on PR, then deploy to Pages. Add an accessibility check (axe or Lighthouse CI).
-- [ ] Update `Claude.md` to match the new architecture and point to `docs/`.
+- [x] Define the **query spec** as a JSON Schema now (`schema/query-spec.schema.json`). The URL, the guided templates and the AI parser in Phase 3 all produce it.
+- [x] `stats/` unit tests with `node --test` (37 tests, synthetic fixtures). Golden fixtures from the real API still to do.
+- [x] URL state (`?q=profile&place=…&lat=…&lon=…&from=5&to=6`), so results are shareable and the back button works.
+- [x] Error handling around every render. Chart.js was replaced by small SVG charts, so it is no longer a dependency.
+- [x] GitHub Actions: unit tests and the WCAG contrast check (both themes) on every push and PR.
+- [ ] Automated browser accessibility check in CI (axe was run manually during the sprint, with 0 violations). Deploy stays on GitHub Pages' branch deploy, so no workflow is needed.
+- [x] Update `Claude.md` to match the new architecture and point to `docs/`.
 
 **Done when:** for Paris, London and New York, the 1991–2020 monthly Tmax/Tmin and wet-day counts are within the `03` §5 targets of the official normals, and the test suite is green in CI.
 
 ---
 
-## Phase 1: Redesign and the "Profile" answer (M–L)
+## Phase 1: Redesign and the "Profile" answer (M–L), sprint 1 done (user testing still open)
 
 **Goal:** fix legibility and duplication, and lay down the design system every later answer type will reuse.
 
@@ -188,7 +194,8 @@ Browser (GitHub Pages)                    Serverless proxy                      
 
 These features answer "**which places** match…?". Searching across hundreds of places can't be done live in the browser: it would mean downloading 30 years of data per city and would exceed the free API limits. So a **scheduled GitHub Action** precomputes a compact table of 1991–2020 monthly normals per city and commits it as `data/cities-normals.json` (a few hundred KB). The site reads that file instantly.
 
-- [ ] **City table.** Recommended starting coverage: **global, about 500 cities** (every capital, cities over 1 million inhabitants, and the most-visited tourist destinations). It can grow later. The job is rate-limited, so building the table may take a few days of API quota. It is then refreshed rarely, because normals change only once a decade.
+- [ ] **City table.** Coverage decided: **global, about 500 cities to start** (every capital, cities over 1 million inhabitants, and the most-visited tourist destinations). It can grow later. It is refreshed rarely, because normals change only once a decade.
+  - **Quota check first.** If Open-Meteo counts a 30-year request as about 780 calls (`03` §2 *verify*), 500 cities is about 390k calls: roughly 6 weeks of the free daily quota. Options: (a) one month of a paid Open-Meteo plan for the initial build; (b) a spread-out free build; (c) computing the normals straight from the Copernicus ERA5 files in the Action. Decide once the real weighting is confirmed.
 - [ ] **Find:** constraint filters (months, temperature range, max wet days, min sunshine, region) give a ranked list and a map.
 - [ ] **Best time to visit:** a 12-month suitability strip for a place and the user's preferences. This works for any place, without needing the table.
 - [ ] **Event-date probability:** a date and place give the chance of a wet day, of > 30 °C, and the typical range (±7-day window). This also works for any place.
@@ -219,15 +226,15 @@ These features answer "**which places** match…?". Searching across hundreds of
 | Data etiquette | Open-Meteo attribution (CC BY 4.0) and ECMWF/Copernicus credit in the footer and on the Methodology page. Stay within the free non-commercial terms, or move to an API plan if the site grows. |
 | Language | English UI and answers. |
 
-## Suggested first sprint (the next concrete step)
+## Sprint log
 
-1. Phase 0 data switch, the `stats/` module with tests, and the query-spec schema: the "trustworthy numbers" milestone.
-2. Design tokens (light by default, dark available, both AA-checked) and the new page skeleton without duplications.
-3. Profile answer on the new skeleton, plus the Methodology page v1.
+**Sprint 1 (done):** the data switched to ERA5 1991–2020 with correct statistics and 37 unit tests. Shipped: the query-spec schema and URL state, the light/dark design system with a CI contrast check, the new de-duplicated page, the Profile answer (sentence, key figures, three SVG charts, a month-by-month table with CSV download, "how this was computed"), and the public methodology page.
 
-That alone replaces the current site with one that is correct, readable and shareable. Every later phase adds an answer type to the same skeleton and to the question box.
+**Next sprint (proposed):**
+1. With network access: record golden fixtures from the real API, run the official-normals benchmark, and confirm the API quota weighting.
+2. A small user test of the Profile page (Phase 1 "done when").
+3. Phase 2, "Today vs normal".
 
 ## Still open
 
-- **City table coverage (Phase 6):** global with about 500 cities (recommended), or Europe-first. It only changes which places can appear in "find a place" and "climate twin" results. Everything else works for any place on Earth either way. Not needed before Phase 6.
 - **Proxy host:** Cloudflare Workers is recommended. This needs a Cloudflare account and an Anthropic API key owned by you before Phase 3.

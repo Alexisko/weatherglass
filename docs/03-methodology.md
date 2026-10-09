@@ -2,7 +2,7 @@
 
 This document is the **source of truth** for how Weatherglass turns raw data into numbers. Each metric shown on the site must be defined here, and each definition should follow a published convention (WMO, ETCCDI, Copernicus/ECMWF). A shorter public version of this page will be linked from every dashboard ("How this was computed").
 
-> Status: **v0.1, proposed.** Items marked *verify* must be confirmed against the live API documentation when they are implemented. The container used to write this had no network access to Open-Meteo.
+> Status: **v0.2. §3.1 and §3.3–3.5 are implemented** (Profile answer, `js/stats/profile.js`, constants in `js/config.js`). The other sections are still proposals. Items marked *verify* must be confirmed against the live API. The container used to write this had no network access to Open-Meteo.
 
 ## 1. Principles
 
@@ -18,22 +18,28 @@ This document is the **source of truth** for how Weatherglass turns raw data int
 | Use | Source (Open-Meteo endpoint) | Underlying data | Coverage | Notes |
 |---|---|---|---|---|
 | Geocoding | `geocoding-api.open-meteo.com/v1/search` | GeoNames | Global | Returns the place's elevation, time zone and population. |
-| **Past climate and normals** | Historical Weather API `archive-api.open-meteo.com/v1/archive` | **ERA5** (≈ 0.25°, ≈ 25–30 km, from 1940) and **ERA5-Land** (≈ 0.1°, ≈ 9 km, from 1950) | Global, about 5 days of latency | ECMWF/Copernicus reanalysis: a weather model constrained by observations. Use `models=era5_land` for temperature where available (finer topography) and `era5` for long series and over the ocean. *verify* the exact model keys. |
+| **Past climate and normals** | Historical Weather API `archive-api.open-meteo.com/v1/archive` | **ERA5** (≈ 0.25°, ≈ 25–30 km, from 1940) and **ERA5-Land** (≈ 0.1°, ≈ 9 km, from 1950) | Global, about 5 days of latency | ECMWF/Copernicus reanalysis: a weather model constrained by observations. **v0.2 uses `models=era5` for every variable**, so all places and variables share one dataset. Open-Meteo adjusts temperature to the point's elevation (90 m terrain model). Whether ERA5-Land improves temperature is to be decided by the §5 benchmark. |
 | **Recent days, today and forecast** | Forecast API `api.open-meteo.com/v1/forecast` with `past_days` (up to 92) and `forecast_days` (up to 16) | Best-match operational models (ECMWF IFS, ICON, GFS…) | Global | Fills the ERA5 latency gap and gives "today". Values come from a different system than ERA5 and are **flagged as preliminary**. |
 | **Future projections** | Climate API `climate-api.open-meteo.com/v1/climate` | CMIP6 HighResMIP, 7 models (CMCC_CM2_VHR4, FGOALS_f3_H, HiRAM_SIT_HR, MRI_AGCM3_2_S, EC_Earth3P_HR, MPI_ESM1_2_XR, NICAM16_8S), 1950–2050 | Global, downscaled | HighResMIP's future experiment uses a **high-emissions** forcing (close to SSP5-8.5). Say so. Use **all models** and report the median and spread. |
 | Static city table (Find / Compare / Twin) | Precomputed by a scheduled GitHub Action from the Historical API | ERA5 normals for ≈ 500–1,000 cities | Global | Stored as JSON in the repo and served by GitHub Pages. Rate-limit-friendly. |
 
 **Daily variables used** (Historical API): `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `apparent_temperature_max/min`, `precipitation_sum`, `rain_sum`, `snowfall_sum`, `precipitation_hours`, `sunshine_duration`, `daylight_duration`, `wind_speed_10m_max`, `wind_gusts_10m_max`, `shortwave_radiation_sum`, `et0_fao_evapotranspiration`. Hourly `dew_point_2m` and `relative_humidity_2m` are aggregated to daily values when needed. *verify* the variable list.
 
-**Volume:** 30 years × 365 days × ~12 variables ≈ 130k values, a few hundred KB of JSON per place. That is one request, cached in IndexedDB.
+**Volume:** 30 years × 365 days × 6 variables ≈ 66k values, a few hundred KB of JSON per place. That is one request, cached in IndexedDB.
+
+**API quota (*verify*):** Open-Meteo counts long requests as several calls (reportedly about one call per two weeks of data, which would make one 30-year request worth about 780 calls). On the free tier (10,000 calls a day per IP), that would allow roughly a dozen new places per user per day, and it matters a lot for the Phase 6 city table. Mitigations: the browser cache now, and a shared server-side cache in the Phase 3 proxy.
 
 ## 3. Definitions
 
 ### 3.1 Climate normals (answer type *Profile*)
 
-- **Monthly normal** of a daily variable `X` for month `m`: the mean over 1991–2020 of the 30 monthly means (temperature) or monthly totals (precipitation, sunshine), following **WMO-No. 1203** (*Guidelines on the Calculation of Climate Normals*).
-- **Completeness rule:** a month counts if no more than 5 days are missing; a normal needs at least 24 of 30 years (≥ 80 %). Gridded reanalysis is complete, but the rule is coded anyway for robustness and for the forecast-filled recent period.
-- **Spread:** P10 and P90 of the 30 monthly values ("in 8 years out of 10, July's average high is between … and …"). For daily distributions see §3.2.
+- **Monthly normal** of a daily variable `X` for month `m`: the mean over 1991–2020 of the 30 monthly means (temperature, sunshine and daylight hours per day) or monthly totals (precipitation, wet days, snowfall, snow days), following **WMO-No. 1203** (*Guidelines on the Calculation of Climate Normals*).
+- **Selected period** (any month range, e.g. May–Jun, or Dec–Feb across the year end): for each occurrence of the period, means are the day-weighted mean of its monthly means, and totals are summed over its months. The normal is the mean over occurrences. A period crossing the year end is labelled by its start year and has 29 complete occurrences in 1991–2020.
+- **Completeness rules:** for means, the WMO "3/5 rule" (a month counts if no more than 5 days are missing and no more than 3 in a row); for totals and counts, every day must be present. Each variable is checked separately. A normal needs at least 80 % of the possible occurrences (24 of 30); otherwise it is not shown. Gridded reanalysis is complete, but the rules are coded anyway for robustness and for the forecast-filled recent period.
+- **Spread, two kinds, never mixed:**
+  - *Daily spread* ("most days") for temperature: P10–P90 of **all daily values** in the period over the valid years (≈ 930 values for a month). Shown as "most days 19 to 29 °C" and as the shaded band on the temperature chart.
+  - *Year-to-year spread* for totals: P10–P90 of the 30 yearly totals ("in 8 years out of 10, July's rain is between … and …"). Computed in v0.2 but not yet displayed.
+- **Percentiles:** linear interpolation between order statistics (Hyndman & Fan type 7, the default in R, NumPy and spreadsheets).
 - **Custom periods** (e.g. 15 May–10 June) are computed from the daily data directly, not by averaging monthly normals.
 
 ### 3.2 Day-of-year climatology (answer type *Anomaly*)
@@ -47,7 +53,7 @@ This document is the **source of truth** for how Weatherglass turns raw data int
 
 ### 3.3 Precipitation
 
-- **Wet day:** precipitation ≥ **1.0 mm** (WMO/ETCCDI `R1mm`). **Heavy-rain day:** ≥ 10 mm (`R10mm`). **Very heavy:** ≥ 20 mm (`R20mm`).
+- **Wet day:** precipitation ≥ **1.0 mm** (WMO/ETCCDI `R1mm`, inclusive). Precipitation includes melted snow, so where any month averages ≥ 0.5 snow days the site says "days with rain or snow". **Heavy-rain day:** ≥ 10 mm (`R10mm`). **Very heavy:** ≥ 20 mm (`R20mm`).
 - **Chance of a wet day** in a period = wet days / days, from the daily data.
 - **Monthly totals:** the mean of the 30 monthly totals, never `sum / hard-coded years`.
 - **Snow:** `snowfall_sum` in cm of fresh snow. "Snowy day" = ≥ 1 cm. *verify* the units.
@@ -102,7 +108,7 @@ This document is the **source of truth** for how Weatherglass turns raw data int
 
 | Limitation | Effect | How we communicate it |
 |---|---|---|
-| Grid cell, not station | ERA5 ≈ 25–30 km and ERA5-Land ≈ 9 km cells smooth coasts, valleys and urban heat islands. Extremes are muted. | Show the grid-cell elevation next to the city elevation. Warn when they differ by > 200 m or when the place is coastal. |
+| Grid cell, not station | ERA5 ≈ 25–30 km and ERA5-Land ≈ 9 km cells smooth coasts, valleys and urban heat islands. Extremes are muted. | Show the grid-cell centre and the elevation used. Open-Meteo already adjusts temperature to the point's elevation, so a separate elevation warning was not needed. A coastal warning is still to do. |
 | Reanalysis precipitation | Rain totals and intense convective rain are less reliable than temperature. | Lower-confidence badge on precipitation cards. |
 | Pre-1979 data | Fewer observations constrain the reanalysis. | Shaded segment on trend charts. |
 | Recent days | The last ≈ 5 days come from the forecast system, not ERA5. | "Preliminary" label and a different marker style. |
@@ -130,4 +136,5 @@ This document is the **source of truth** for how Weatherglass turns raw data int
 
 ## Changelog
 
+- **v0.2** (2026-10-09): Profile answer implemented. ERA5 (`models=era5`) for all variables, 1991–2020, local days. 3/5 completeness rule for means and all-days rule for totals. Daily vs year-to-year spread defined separately. Percentile method fixed (type 7). "Rain or snow" wording for snowy places. API quota note.
 - **v0.1** (2026-10-09): initial proposal written after the audit of the first version.

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alexisko.github.io/weatherglass/schema/query-spec.schema.json",
+  "title": "Weatherglass query spec",
+  "description": "A question translated into a structured query. Produced by the URL, the guided templates and (from Phase 3) the AI parser. Numbers are always computed by the site from this spec, never by the parser. Each roadmap phase adds an answer type to the `type` enum.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "place", "months"],
+  "properties": {
+    "type": {
+      "description": "Answer type. Phase 1 ships 'profile' only.",
+      "enum": ["profile"]
+    },
+    "place": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "latitude", "longitude"],
+      "properties": {
+        "name":      { "type": "string", "minLength": 1, "maxLength": 120 },
+        "country":   { "type": "string", "maxLength": 120 },
+        "admin1":    { "type": "string", "maxLength": 120 },
+        "latitude":  { "type": "number", "minimum": -90,  "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "months": {
+      "description": "Inclusive calendar-month range; may wrap the year end (from 12 to 2 = Dec–Feb). from 1 to 12 = whole year.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "to":   { "type": "integer", "minimum": 1, "maximum": 12 }
+      }
+    }
+  }
+}
