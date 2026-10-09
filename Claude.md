@@ -30,3 +30,6 @@ Use the frontend-design skill. Go for a clean, data-forward aesthetic — think 
 
 ## Deployment
 GitHub Pages (static site, no server)
+
+## Planning docs (read first)
+See `docs/`: audit of v1, question catalogue & answer types, methodology (source of truth for every metric), and the phased roadmap. Methodology changes go in `docs/03-methodology.md` before code.
